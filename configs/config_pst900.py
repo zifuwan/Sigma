@@ -19,34 +19,34 @@ C.abs_dir = osp.realpath(".")
 # Dataset config
 """Dataset Path"""
 C.dataset_name = 'PST900'
-C.dataset_path = osp.join(C.root_dir, 'datasets', 'MFNet')
-C.rgb_root_folder = osp.join(C.dataset_path, 'RGB')
+C.dataset_path = osp.join(C.root_dir, 'datasets', 'PST900_RGBT_Dataset')
+C.rgb_root_folder = osp.join(C.dataset_path, 'rgb_resize')
 C.rgb_format = '.png'
-C.gt_root_folder = osp.join(C.dataset_path, 'Label')
+C.gt_root_folder = osp.join(C.dataset_path, 'labels_resize')
 C.gt_format = '.png'
 C.gt_transform = False
 # True when label 0 is invalid, you can also modify the function _transform_gt in dataloader.RGBXDataset
-# True for most dataset valid, Faslse for MFNet(?)
-C.x_root_folder = osp.join(C.dataset_path, 'Modal')
+# True for most dataset valid, False for MFNet(?)
+C.x_root_folder = osp.join(C.dataset_path, 'thermal_resize')
 C.x_format = '.png'
 C.x_is_single_channel = True # True for raw depth, thermal and aolp/dolp(not aolp/dolp tri) input
-C.train_source = osp.join(C.dataset_path, "train2.txt")
+C.train_source = osp.join(C.dataset_path, "train.txt")
 C.eval_source = osp.join(C.dataset_path, "test.txt")
 C.is_test = False
-C.num_train_imgs = 1176 #1568
-C.num_eval_imgs = 393
-C.num_classes = 9
-C.class_names =  ['unlabeled', 'car', 'person', 'bike', 'curve', 'car stop', 'guardrail', 'color cone', 'bump']
+C.num_train_imgs = 597
+C.num_eval_imgs = 288
+C.num_classes = 5
+C.class_names =  ['Background', 'Extinguisher', 'Backpack', 'Hand-Drill', 'Survivor']
 
 """Image Config"""
 C.background = 255
-C.image_height = 480
-C.image_width = 640
+C.image_height = 720
+C.image_width = 1280
 C.norm_mean = np.array([0.485, 0.456, 0.406])
 C.norm_std = np.array([0.229, 0.224, 0.225])
 
 """ Settings for network, this would be different for each kind of model"""
-C.backbone = 'sigma_tiny' #'mit_b2' # Remember change the path below.
+C.backbone = 'sigma_tiny' # Remember change the path below.
 C.pretrained_model = None # C.root_dir + '/pretrained/segformer/mit_b2.pth'
 C.decoder = 'MambaDecoder' # 'MLPDecoder'
 C.decoder_embed_dim = 512
@@ -73,7 +73,7 @@ C.bn_momentum = 0.1
 C.eval_stride_rate = 2 / 3
 C.eval_scale_array = [1] # [0.75, 1, 1.25] # 
 C.eval_flip = False # True # 
-C.eval_crop_size = [480, 640] # [height weight]
+C.eval_crop_size = [720, 1280] # [height weight]
 
 """Store Config"""
 C.checkpoint_start_epoch = 50
@@ -85,7 +85,7 @@ def add_path(path):
         sys.path.insert(0, path)
 add_path(osp.join(C.root_dir))
 
-C.log_dir = osp.abspath('log_final/log_mfnet/' + 'log_' + C.dataset_name + '_' + C.backbone + '_' + 'cmf_smf_scmambadecoder')
+C.log_dir = osp.abspath('log_final/log_pst900/' + 'log_' + C.dataset_name + '_' + C.backbone + '_' + 'cmf_smf_scmambadecoder')
 C.tb_dir = osp.abspath(osp.join(C.log_dir, "tb"))
 C.log_dir_link = C.log_dir
 C.checkpoint_dir = osp.abspath(osp.join(C.log_dir, "checkpoint"))

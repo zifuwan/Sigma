@@ -793,20 +793,20 @@ def test_different_stages_sigma():
 
 def test_different_stages_sa():
     models = nn.ModuleList([
-        ConSA(hidden_dim=96, mlp_ratio=0.0, d_state=4),
+        # ConSA(hidden_dim=96, mlp_ratio=0.0, d_state=4),
         ConSA(hidden_dim=192, mlp_ratio=0.0, d_state=4),
         ConSA(hidden_dim=384, mlp_ratio=0.0, d_state=4),
         ConSA(hidden_dim=768, mlp_ratio=0.0, d_state=4),
         ])
 
     x_rgbs = [
-        torch.randn(1, 120, 160, 96),
+        # torch.randn(1, 120, 160, 96),
         torch.randn(1, 60, 80, 192),
         torch.randn(1, 30, 40, 384),
         torch.randn(1, 15, 20, 768),
     ]
     x_xs = [
-        torch.randn(1, 120, 160, 96),
+        # torch.randn(1, 120, 160, 96),
         torch.randn(1, 60, 80, 192),
         torch.randn(1, 30, 40, 384),
         torch.randn(1, 15, 20, 768),
@@ -832,21 +832,32 @@ def test_scaling_sigma():
 
     x_rgbs = [
         # torch.randn(1, 120, 160, 96),
-        torch.randn(1, 60, 80, 96),
-        torch.randn(1, 60, 60, 96),
-        torch.randn(1, 40, 60, 96),
-        torch.randn(1, 30, 40, 96),
-        torch.randn(1, 15, 20, 96),
-        torch.randn(1, 7, 10, 96),
+        # torch.randn(1, 60, 80, 96),
+        # torch.randn(1, 60, 60, 96),
+        # torch.randn(1, 40, 60, 96),
+        # torch.randn(1, 30, 40, 96),
+        # torch.randn(1, 15, 20, 96),
+        # torch.randn(1, 7, 10, 96),
+        # sequence length = 500, 1000, 1500, 2000, 2500
+        torch.randn(1, 5, 60, 96),
+        torch.randn(1, 10, 60, 96),
+        torch.randn(1, 15, 60, 96),
+        torch.randn(1, 20, 60, 96),
+        torch.randn(1, 25, 60, 96),
     ]
     x_xs = [
         # torch.randn(1, 120, 160, 96),
-        torch.randn(1, 60, 80, 96),
-        torch.randn(1, 60, 60, 96),
-        torch.randn(1, 40, 60, 96),
-        torch.randn(1, 30, 40, 96),
-        torch.randn(1, 15, 20, 96),
-        torch.randn(1, 7, 10, 96),
+        # torch.randn(1, 60, 80, 96),
+        # torch.randn(1, 60, 60, 96),
+        # torch.randn(1, 40, 60, 96),
+        # torch.randn(1, 30, 40, 96),
+        # torch.randn(1, 15, 20, 96),
+        # torch.randn(1, 7, 10, 96),
+        torch.randn(1, 5, 60, 96),
+        torch.randn(1, 10, 60, 96),
+        torch.randn(1, 15, 60, 96),
+        torch.randn(1, 20, 60, 96),
+        torch.randn(1, 25, 60, 96),
     ]
     
     # to cuda
@@ -880,21 +891,32 @@ def test_scaling_sa():
 
     x_rgbs = [
         # torch.randn(1, 120, 160, 96),
-        torch.randn(1, 60, 80, 96),
-        torch.randn(1, 60, 60, 96),
-        torch.randn(1, 40, 60, 96),
-        torch.randn(1, 30, 40, 96),
-        torch.randn(1, 15, 20, 96),
-        torch.randn(1, 7, 10, 96),
+        # torch.randn(1, 60, 80, 96),
+        # torch.randn(1, 60, 60, 96),
+        # torch.randn(1, 40, 60, 96),
+        # torch.randn(1, 30, 40, 96),
+        # torch.randn(1, 15, 20, 96),
+        # torch.randn(1, 7, 10, 96),
+        # sequence length = 300, 600, 900, 1200, 1500
+        torch.randn(1, 5, 60, 96),
+        torch.randn(1, 10, 60, 96),
+        torch.randn(1, 15, 60, 96),
+        torch.randn(1, 20, 60, 96),
+        torch.randn(1, 25, 60, 96),
     ]
     x_xs = [
         # torch.randn(1, 120, 160, 96),
-        torch.randn(1, 60, 80, 96),
-        torch.randn(1, 60, 60, 96),
-        torch.randn(1, 40, 60, 96),
-        torch.randn(1, 30, 40, 96),
-        torch.randn(1, 15, 20, 96),
-        torch.randn(1, 7, 10, 96),
+        # torch.randn(1, 60, 80, 96),
+        # torch.randn(1, 60, 60, 96),
+        # torch.randn(1, 40, 60, 96),
+        # torch.randn(1, 30, 40, 96),
+        # torch.randn(1, 15, 20, 96),
+        # torch.randn(1, 7, 10, 96),
+        torch.randn(1, 5, 60, 96),
+        torch.randn(1, 10, 60, 96),
+        torch.randn(1, 15, 60, 96),
+        torch.randn(1, 20, 60, 96),
+        torch.randn(1, 25, 60, 96),
     ]
     
     # to cuda
@@ -914,13 +936,13 @@ def test_scaling_sa():
 
 if __name__ == "__main__":
     # draw teaser figure
-    # test_scaling_sigma()
-    # print("=============================================")
-    # print("=============================================")
-    # test_scaling_sa()
+    test_scaling_sigma()
+    print("=============================================")
+    print("=============================================")
+    test_scaling_sa()
     
     # compute real flops of different stages
     # test_different_stages_sigma()
-    print("=============================================")
-    print("=============================================")
-    test_different_stages_sa()
+    # print("=============================================")
+    # print("=============================================")
+    # test_different_stages_sa()

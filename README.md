@@ -1,10 +1,20 @@
-# Sigma: Siamese Mamba Network for Multi-Modal Semantic Segmentation
+
+<div align="center">
+<h1> Sigma: Siamese Mamba Network for Multi-Modal Semantic Segmentation </h1>
+
+[Zifu Wan]()<sup>1</sup>, [Yuhao Wang]()<sup>2</sup>, [Silong Yong]()<sup>1</sup>, [Pingping Zhang](https://github.com/yuhongtian17)<sup>2</sup>, [Simon Stepputtis]()<sup>1</sup>, [Katia Sycara]()<sup>1</sup>, [Yaqi Xie]()<sup>1</sup></sup>
+
+<sup>1</sup>  Robotics Institute, Carnegie Mellon University, USA  
+<sup>2</sup>  School of Future Technology, Dalian University of Technology, China
 
 [![arXiv](https://img.shields.io/badge/arXiv-2403.12033-b31b1b.svg)](https://arxiv.org/abs/2403.12033) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+</div>
+
+
 ## 👀Introduction
 
-This repository contains the code for our paper `Sigma: Siamese Mamba Network for Multi-Modal Semantic Segmentation`. [[Paper](https://arxiv.org/abs/2403.12033)] [[Website](https://zhangce01.github.io/HiKER-SGG/)]
+This repository contains the code for our paper `Sigma: Siamese Mamba Network for Multi-Modal Semantic Segmentation`. [[Paper](https://arxiv.org/abs/2403.12033)]
 
 ![](figs/sigma.png)
 
@@ -44,7 +54,7 @@ Install pytorch, cuda and cudnn, then install other dependencies via:
 
     Please refer to the original dataset websites for more details. You can directly download the processed RGB-Depth datasets from [DFormer](https://github.com/VCIP-RGBD/DFormer?tab=readme-ov-file), though you may need to make small modifications to the txt files.
 
-2. <u>We also provide the processed datasets (including RGB-Thermal and RGB-Depth) we use here: [Google Drive Link]().</u>
+2. <u>We also provide the processed datasets (including RGB-Thermal and RGB-Depth) we use here: [Google Drive Link](https://drive.google.com/drive/folders/1GD4LYF208h9-mHJ_lxW11UM0TPlRmv0z?usp=drive_link).</u>
 
 3. If you are using your own datasets, please orgnize the dataset folder in the following structure:
     ```shell
@@ -81,9 +91,12 @@ Install pytorch, cuda and cudnn, then install other dependencies via:
 
 ### Training
 1. Please download the pretrained [VMamba](https://github.com/MzeroMiko/VMamba) weights:
+
     - [VMamba_Tiny](https://github.com/MzeroMiko/VMamba/releases/download/%2320240218/vssmtiny_dp01_ckpt_epoch_292.pth).
     - [VMamba_Small](https://github.com/MzeroMiko/VMamba/releases/download/%2320240218/vssmsmall_dp03_ckpt_epoch_238.pth).
     - [VMamba_Base](https://github.com/MzeroMiko/VMamba/releases/download/%2320240218/vssmbase_dp06_ckpt_epoch_241.pth).
+
+    <u> Please put them under `pretrained/vmamba`. </u>
 
 
 2. Config setting.
@@ -91,13 +104,19 @@ Install pytorch, cuda and cudnn, then install other dependencies via:
     Edit config file in the `configs` folder.    
     Change C.backbone to `sigma_tiny` / `sigma_small` / `sigma_base` to use the three versions of Sigma. 
 
-3. Run multi GPU distributed training:
+3. Run multi-GPU distributed training:
 
     ```shell
     NCCL_P2P_DISABLE=1 CUDA_VISIBLE_DEVICES="0,1,2,3" python -m torch.distributed.launch --nproc_per_node=4  --master_port 29502 train.py -p 29502 -d 0,1,2,3 -n "dataset_name"
     ```
 
     Here, `dataset_name=mfnet/pst/nyu/sun`, referring to the four datasets.
+
+4. You can also use single-GPU training:
+
+    ```shell
+    CUDA_VISIBLE_DEVICES="1,2,3,4,5,6,7" torchrun -m --nproc_per_node=1 train.py -p 29501 -d 0 -n "dataset_name" 
+    ```
 
 
 ### Evaluation
@@ -116,21 +135,43 @@ Install pytorch, cuda and cudnn, then install other dependencies via:
     CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7" python eval.py -d="0,1,2,3,4,5,6,7" -n "dataset_name" -e="epoch_number" -p="visualize_savedir"
     ```
 
-## 📈VG-C Benchmark
+## 📈Results
 
-In our paper, we introduce a new synthetic VG-C benchmark for SGG, containing 20 challenging image corruptions, including simple transformations and severe weather conditions.
+We provide our trained weights on the four datasets:
 
-![](fig/corruption.png)
+### MFNet (9 categories)
+| Architecture | Backbone | mIOU | Weight |
+|:---:|:---:|:---:|:---:|
+| Sigma | VMamba-T | 60.2% | [Sigma-T-MFNet](https://drive.google.com/file/d/1N9UU9G5K8qxKsZOuEzSLiCGXC5XCaMaU/view?usp=drive_link) |
+| Sigma | VMamba-S | 61.1% | [Sigma-S-MFNet](https://drive.google.com/file/d/1heHnyvDTSa2oYxAD5wcgpIY3OZ198Cr2/view?usp=drive_link) |
+| Sigma | VMamba-B | 61.3% | [Sigma-B-MFNet](https://drive.google.com/file/d/1an6pqLeEYHZZLOmfyY8A3ooKP8ZVMU93/view?usp=drive_link) |
 
-We include the code for generating these 20 corruptions in ``dataloaders/corruptions.py``. To use it, you also need to modify the codes in ``dataloaders/visual_genome.py``, and also enable ``-test_n`` in the evaluation notebook file.
+### PST900 (5 categories)
+| Architecture | Backbone | mIOU | Weight |
+|:---:|:---:|:---:|:---:| 
+| Sigma | VMamba-T | 88.6% | [Sigma-T-PST](https://drive.google.com/file/d/1Qx_alwSmxj_8TqCO0RD6VQvhcwp-RQ-e/view?usp=drive_link) |
+| Sigma | VMamba-S | 87.8% | [Sigma-S-PST](https://drive.google.com/file/d/1iHL0fLtV7F2s7tm_OrCq7vsqYJPuIF6q/view?usp=drive_link) |
+
+### NYU Depth V2 (40 categories)
+| Architecture | Backbone | mIOU | Weight |
+|:---:|:---:|:---:|:---:|
+| Sigma | VMamba-T | 53.7% | [Sigma-T-NYU](https://drive.google.com/file/d/15p2EePJj2sGKoIxXUxMNHq7vvplC8Gcd/view?usp=drive_link) |
+| Sigma | VMamba-S | 57.0% | [Sigma-S-NYU](https://drive.google.com/file/d/17afDv4BN69m66N3pfwTFnpBSXIUvlkwk/view?usp=drive_link) |
+
+### SUN RGB-D (37 categories)
+| Architecture | Backbone | mIOU | Weight |
+|:---:|:---:|:---:|:---:| 
+| Sigma | VMamba-T | 49.6% | [Sigma-T-SUN](https://drive.google.com/file/d/16mHj7AiEjkIWm77wBHO0dn7DQbGMljTM/view?usp=drive_link) |
+| Sigma | VMamba-S | 52.1% | [Sigma-S-SUN](https://drive.google.com/file/d/1PC8_Oj-m4yf-k6BQ4gBlGUdyOnG3xTsP/view?usp=drive_link) |
 
 ## 🙏Acknowledgements
 
-Our codebase is adapted from [GB-Net](https://github.com/alirezazareian/gbnet) and [EB-Net](https://github.com/zhanwenchen/eoa). We thank the authors for releasing their code!
+Our dataloader codes are based on [CMX](https://github.com/huaaaliu/RGBX_Semantic_Segmentation). Our Mamba codes are adapted from [Mamba](https://github.com/state-spaces/mamba) and [VMamba](https://github.com/MzeroMiko/VMamba). We thank the authors for releasing their code!
+We also appreciate [DFormer](https://github.com/VCIP-RGBD/DFormer?tab=readme-ov-file) for providing their processed RGB-Depth datasets.
 
 ## 📧Contact
 
-If you have any questions, please  contact at [cezhang@cs.cmu.edu](mailto:cezhang@cs.cmu.edu).
+If you have any questions, please  contact at [zifuw@andrew.cmu.edu](mailto:zifuw@andrew.cmu.edu).
 
 ## 📌 BibTeX & Citation
 
