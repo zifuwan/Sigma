@@ -96,7 +96,7 @@ Install pytorch, cuda and cudnn, then install other dependencies via:
     - [VMamba_Small](https://github.com/MzeroMiko/VMamba/releases/download/%2320240218/vssmsmall_dp03_ckpt_epoch_238.pth).
     - [VMamba_Base](https://github.com/MzeroMiko/VMamba/releases/download/%2320240218/vssmbase_dp06_ckpt_epoch_241.pth).
 
-    <u> Please put them under `pretrained/vmamba`. </u>
+    <u> Please put them under `pretrained/vmamba/`. </u>
 
 
 2. Config setting.
@@ -155,7 +155,7 @@ We provide our trained weights on the four datasets:
 ### NYU Depth V2 (40 categories)
 | Architecture | Backbone | mIOU | Weight |
 |:---:|:---:|:---:|:---:|
-| Sigma | VMamba-T | 53.7% | [Sigma-T-NYU](https://drive.google.com/file/d/15p2EePJj2sGKoIxXUxMNHq7vvplC8Gcd/view?usp=drive_link) |
+| Sigma | VMamba-T | 53.9% | [Sigma-T-NYU](https://drive.google.com/file/d/15p2EePJj2sGKoIxXUxMNHq7vvplC8Gcd/view?usp=drive_link) |
 | Sigma | VMamba-S | 57.0% | [Sigma-S-NYU](https://drive.google.com/file/d/17afDv4BN69m66N3pfwTFnpBSXIUvlkwk/view?usp=drive_link) |
 
 ### SUN RGB-D (37 categories)

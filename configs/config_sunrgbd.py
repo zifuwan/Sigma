@@ -84,8 +84,8 @@ C.norm_mean = np.array([0.485, 0.456, 0.406])
 C.norm_std = np.array([0.229, 0.224, 0.225])
 
 """ Settings for network, this would be different for each kind of model"""
-C.backbone = 'vmamba' #'mit_b2' # Remember change the path below.
-C.pretrained_model = C.root_dir + '/pretrained/segformer/mit_b2.pth'
+C.backbone = 'sigma_tiny' #'mit_b2' # Remember change the path below.
+C.pretrained_model = None # C.root_dir + '/pretrained/segformer/mit_b2.pth'
 C.decoder = 'MambaDecoder' # 'MLPDecoder'
 C.decoder_embed_dim = 512
 C.optimizer = 'AdamW'
@@ -109,12 +109,12 @@ C.bn_momentum = 0.1
 """Eval Config"""
 # C.eval_iter = 1
 C.eval_stride_rate = 2 / 3
-C.eval_scale_array = [0.75, 1, 1.25] # 
-C.eval_flip = True
+C.eval_scale_array = [0.75, 1, 1.25] 
+C.eval_flip = True 
 C.eval_crop_size = [480, 640] # [height weight]
 
 """Store Config"""
-C.checkpoint_start_epoch = 60
+C.checkpoint_start_epoch = 50
 C.checkpoint_step = 10
 
 """Path Config"""
@@ -123,7 +123,7 @@ def add_path(path):
         sys.path.insert(0, path)
 add_path(osp.join(C.root_dir))
 
-C.log_dir = osp.abspath('log_sunrgbd/' + 'log_' + C.dataset_name + '_' + C.backbone + '_' + 'FMamba_t_concatN_ssm_cma_cam')
+C.log_dir = osp.abspath('log_final/log_sunrgbd/' + 'log_' + C.dataset_name + '_' + C.backbone + '_' + 'cromb_conmb_cvssdecoder')
 C.tb_dir = osp.abspath(osp.join(C.log_dir, "tb"))
 C.log_dir_link = C.log_dir
 C.checkpoint_dir = osp.abspath(osp.join(C.log_dir, "checkpoint"))

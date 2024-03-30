@@ -19,7 +19,7 @@ from PIL import Image
 logger = get_logger()
 
 class SegEvaluator(Evaluator):
-    def func_per_iteration(self, data, device):
+    def func_per_iteration(self, data, device, config):
         img = data['data']
         label = data['label']
         modal_x = data['modal_x']
@@ -121,6 +121,6 @@ if __name__ == "__main__":
                                  config.norm_std, network,
                                  config.eval_scale_array, config.eval_flip,
                                  all_dev, args.verbose, args.save_path,
-                                 args.show_image)
+                                 args.show_image, config)
         _, mean_IoU = segmentor.run_eval(config.checkpoint_dir, args.epochs, config.val_log_file,
                       config.link_val_log_file)

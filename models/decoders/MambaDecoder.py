@@ -4,7 +4,7 @@ import torch
 
 from torch.nn.modules import module
 import torch.nn.functional as F
-from models.encoders.vmamba import VSSBlock, VSSDecoderBlock
+from models.encoders.vmamba import CVSSDecoderBlock
 import torch.utils.checkpoint as checkpoint
 from einops import rearrange
 
@@ -22,12 +22,10 @@ class PatchExpand(nn.Module):
         x: B, H, W, C
         """
         
-        # x = x.permute(0, 2, 3, 1).contiguous() # B, H, W, C
         x = self.expand(x) # B, H, W, 2C
         B, H, W, C = x.shape
         x = rearrange(x, 'b h w (p1 p2 c)-> b (h p1) (w p2) c', p1=2, p2=2, c=C // 4)
         x = self.norm(x)
-        # x = x.permute(0, 3, 1, 2).contiguous() # B, C, H, W
 
         return x
 
@@ -67,13 +65,11 @@ class FinalPatchExpand_X4(nn.Module):
         """
         x: B, H, W, C
         """
-        # x = x.permute(0, 2, 3, 1).contiguous() # B, H, W, C
         x = self.expand(x) # B, H, W, 16C
         B, H, W, C = x.shape
         x = rearrange(x, 'b h w (p1 p2 c)-> b (h p1) (w p2) c', p1=self.patch_size, p2=self.patch_size,
                       c=C // (self.patch_size ** 2))
         x = self.norm(x)
-        # x = x.permute(0, 3, 1, 2).contiguous() # B, C, 4H, 4W
         return x
 
 
@@ -117,7 +113,7 @@ class Mamba_up(nn.Module):
 
         # build blocks
         self.blocks = nn.ModuleList([
-            VSSDecoderBlock(
+            CVSSDecoderBlock(
                 hidden_dim=dim, 
                 drop_path=drop_path[i],
                 norm_layer=norm_layer,
@@ -142,7 +138,6 @@ class Mamba_up(nn.Module):
             self.upsample = None
 
     def forward(self, x):
-        # x = x.permute(0, 2, 3, 1).contiguous() # B, H, W, C
         for blk in self.blocks:
             if self.use_checkpoint:
                 x = checkpoint.checkpoint(blk, x)
@@ -183,7 +178,6 @@ class MambaDecoder(nn.Module):
         dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]
 
         self.layers_up = nn.ModuleList()
-        # self.concat_back_dim = nn.ModuleList()
         for i_layer in range(self.num_layers):
             if i_layer == 0:
                 # B, 768, 15, 20 -> B, 384, 30, 40
@@ -222,13 +216,7 @@ class MambaDecoder(nn.Module):
         #                                 patch_size=4, dim=embed_dim)
         self.up = FinalUpsample_X4(input_resolution=(img_size[0] // patch_size, img_size[1] // patch_size),
                                       patch_size=4, dim=embed_dim)
-        # self.up_0 = FinalPatchExpand_X4_1(input_resolution=(56, 56), dim_scale=1, dim=128, patchsize=1)
-        # self.up_1 = FinalPatchExpand_X4_1(input_resolution=(28, 28), dim_scale=1, dim=256, patchsize=1)
-        # self.up_2 = FinalPatchExpand_X4_1(input_resolution=(14, 14), dim_scale=1, dim=512, patchsize=1)
         self.output = nn.Conv2d(in_channels=embed_dim, out_channels=self.num_classes, kernel_size=1, bias=False)
-        # self.output_0 = nn.Conv2d(in_channels=128, out_channels=self.num_classes, kernel_size=1, bias=False)
-        # self.output_1 = nn.Conv2d(in_channels=256, out_channels=self.num_classes, kernel_size=1, bias=False)
-        # self.output_2 = nn.Conv2d(in_channels=512, out_channels=self.num_classes, kernel_size=1, bias=False)
 
         
     def forward_up_features(self, inputs):  # B, C, H, W

@@ -9,7 +9,7 @@ from ..net_utils import FeatureRectifyModule as FRM
 import math
 import time
 from engine.logger import get_logger
-from models.encoders.vmamba import Backbone_VSSM, CrossMambaFusionBlock, ScaledMambaFusionBlock
+from models.encoders.vmamba import Backbone_VSSM, CrossMambaFusionBlock, ConcatMambaFusionBlock
 
 logger = get_logger()
 
@@ -51,7 +51,7 @@ class RGBXTransformer(nn.Module):
             ) for i in range(4)
         )
         self.channel_attn_mamba = nn.ModuleList(
-            ScaledMambaFusionBlock(
+            ConcatMambaFusionBlock(
                 hidden_dim=dims * (2 ** i),
                 mlp_ratio=0.0,
                 d_state=4,
@@ -74,25 +74,6 @@ class RGBXTransformer(nn.Module):
                 
                 self.absolute_pos_embed.append(absolute_pos_embed)
                 self.absolute_pos_embed_x.append(absolute_pos_embed_x)
-
-                # self.absolute_pos_embed_d = nn.Parameter(torch.zeros(1, embed_dim, patches_resolution[0], patches_resolution[1]))
-                # trunc_normal_(self.absolute_pos_embed_d, std=.02)
-
-
-    # def forward_features(self, x_rgb, x_e):
-    #     """
-    #     x_rgb: B x C x H x W
-    #     """
-    #     B = x_rgb.shape[0]
-    #     outs_fused = []
-        
-    #     outs_rgb = self.vssm(x_rgb) # B x C x H x W
-    #     outs_x = self.vssm(x_e) # B x C x H x W
-        
-    #     for i in range(4):
-    #         outs_fused.append((outs_rgb[i] + outs_x[i]) / 2)
-        
-    #     return outs_fused
 
     def forward_features(self, x_rgb, x_e):
         """
@@ -124,21 +105,6 @@ class RGBXTransformer(nn.Module):
                 x_fuse = (out_rgb + out_x)
             outs_fused.append(x_fuse)        
         return outs_fused
-
-    # def forward_features(self, x_rgb, x_e):
-    #     """
-    #     x_rgb: B x C x H x W
-    #     """
-    #     B = x_rgb.shape[0]
-    #     outs_concat = []
-        
-    #     outs_rgb = self.vssm(x_rgb) # B x C x H x W
-    #     outs_x = self.vssm(x_e) # B x C x H x W
-        
-    #     for i in range(4):
-    #         outs_concat.append(torch.cat((outs_rgb[i], outs_x[i]), dim=1))
-        
-    #     return outs_concat
 
     def forward(self, x_rgb, x_e):
         out = self.forward_features(x_rgb, x_e)

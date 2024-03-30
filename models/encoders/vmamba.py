@@ -17,14 +17,13 @@ DropPath.__repr__ = lambda self: f"timm.DropPath({self.drop_prob})"
 
 # import mamba_ssm.selective_scan_fn (in which causal_conv1d is needed)
 try:
-    from mamba_ssm.ops.selective_scan_interface import selective_scan_fn, selective_scan_ref
+    from mamba_ssm.ops.selective_scan_interface import selective_scan_fn
 except:
     pass
 
 # an alternative for mamba_ssm
 try:
     from selective_scan import selective_scan_fn as selective_scan_fn_v1
-    from selective_scan import selective_scan_ref as selective_scan_ref_v1
 except:
     pass
 
@@ -1091,7 +1090,7 @@ class SS2D(nn.Module):
         return out
 
 
-class MM_SS2D(nn.Module):
+class ConMB_SS2D(nn.Module):
     '''
     Multimodal Mamba Selective Scan 2D
     '''
@@ -1257,29 +1256,6 @@ class MM_SS2D(nn.Module):
         D._no_weight_decay = True
         return D
      
-    
-    # def forward_core_orimamba(self, x_rgb: torch.Tensor, x_e: torch.Tensor):
-        selective_scan = selective_scan_fn
-
-        B, D, H, W = x_rgb.shape
-        x_dbl = self.x_proj(rearrange(x, "b d l -> (b l) d"))  # (bl d)
-        dt, B, C = torch.split(x_dbl, [self.dt_rank, self.d_state, self.d_state], dim=-1)
-        dt = self.dt_proj.weight @ dt.t()
-        dt = rearrange(dt, "d (b l) -> b d l", l=L)
-        A = -torch.exp(self.A_log.float())  # (k * d, d_state)
-        B = rearrange(B, "(b l) dstate -> b dstate l", l=L).contiguous()
-        C = rearrange(C, "(b l) dstate -> b dstate l", l=L).contiguous()
-
-        y = selective_scan(
-            x, dt,
-            A, B, C, self.D.float(),
-            delta_bias=self.dt_proj.bias.float(),
-            delta_softplus=True,
-        )
-        # assert out_y.dtype == torch.float
-        y = rearrange(y, "b d l -> b l d")
-        return y
-    
     def forward_corev2_multimodal(self, x_rgb: torch.Tensor, x_e: torch.Tensor, nrows=-1):
         return cross_selective_scan_multimodal_k2(
             x_rgb, x_e, self.x_proj_weight, None, self.dt_projs_weight, self.dt_projs_bias,
@@ -1570,127 +1546,7 @@ class Cross_Mamba_Attention_SSM(nn.Module):
         return y_rgb, y_e
 
 
-class CAMF_SS2D_SSM(nn.Module):
-    '''
-    Channel Attention Mamba Fusion Selective Scan 2D Module with SSM
-    '''
-    def __init__(
-        self,
-        # basic dims ===========
-        d_model=96,
-        d_state=16,
-        ssm_ratio=2,
-        dt_rank="auto",
-        # dwconv ===============
-        # d_conv=-1, # < 2 means no conv 
-        d_conv=3, # < 2 means no conv 
-        conv_bias=True,
-        # ======================
-        dropout=0.,
-        bias=False,
-        # dt init ==============
-        dt_min=0.001,
-        dt_max=0.1,
-        dt_init="random",
-        dt_scale=1.0,
-        dt_init_floor=1e-4,
-        # ======================
-        softmax_version=False,
-        # ======================
-        **kwargs,
-    ):            
-        factory_kwargs = {"device": None, "dtype": None}
-        super().__init__()
-        self.softmax_version = softmax_version
-        self.d_model = d_model
-        self.d_state = math.ceil(self.d_model / 6) if d_state == "auto" else d_state # 20240109
-        self.d_conv = d_conv
-        self.expand = ssm_ratio
-        self.d_inner = int(self.expand * self.d_model)
-        self.dt_rank = math.ceil(self.d_model / 16) if dt_rank == "auto" else dt_rank
-
-        self.in_proj = nn.Linear(self.d_model, self.d_inner, bias=bias, **factory_kwargs)
-        self.in_proj_modalx = nn.Linear(self.d_model, self.d_inner, bias=bias, **factory_kwargs)
-        
-        # conv =======================================
-        if self.d_conv > 1:
-            self.conv2d = nn.Conv2d(
-                in_channels=self.d_inner,
-                out_channels=self.d_inner,
-                groups=self.d_inner,
-                bias=conv_bias,
-                kernel_size=d_conv,
-                padding=(d_conv - 1) // 2,
-                **factory_kwargs,
-            )
-            self.act = nn.SiLU()
-
-        self.out_proj = nn.Linear(self.d_inner, self.d_model, bias=bias, **factory_kwargs)
-        self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
-        
-        # channel attention
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.fc = nn.Sequential(
-            nn.Linear(self.d_inner, self.d_inner // 16, bias=False),
-            nn.SiLU(inplace=True),
-            nn.Linear(self.d_inner // 16, self.d_inner, bias=False),
-            nn.Sigmoid(),
-        )
-        self.ssm = SSM(
-            d_model=self.d_model,
-            d_state=self.d_state,
-            ssm_ratio=ssm_ratio,
-            dt_rank=dt_rank,
-            dt_min=dt_min,
-            dt_max=dt_max,
-            dt_init=dt_init,
-            dt_scale=dt_scale,
-            dt_init_floor=dt_init_floor,
-            **kwargs,
-        )
-
-    def forward(self, x_rgb: torch.Tensor, x_e: torch.Tensor):
-        x_rgb = self.in_proj(x_rgb)
-        x_e = self.in_proj_modalx(x_e)
-        B, H, W, D = x_rgb.shape
-        if self.d_conv > 1:
-            x_rgb_trans = x_rgb.permute(0, 3, 1, 2).contiguous()
-            x_e_trans = x_e.permute(0, 3, 1, 2).contiguous()
-            x_rgb_conv = self.act(self.conv2d(x_rgb_trans)) # (b, d, h, w)
-            x_e_conv = self.act(self.conv2d(x_e_trans)) # (b, d, h, w)
-            x_rgb_conv = rearrange(x_rgb_conv, "b d h w -> b (h w) d")
-            x_e_conv = rearrange(x_e_conv, "b d h w -> b (h w) d")
-            x_concat_L = torch.cat([x_rgb_conv, x_e_conv], dim=1) # b, 2L, d
-            y = self.ssm(x_concat_L) # b, 2L, d -> b, 2L, d
-            B, L, d = y.shape
-            y_rgb = y[:, :L//2] # b, L, d
-            y_e = y[:, L//2:]
-            # SE to get attention
-            b, d, h, w = x_rgb_trans.shape
-            x_rgb_squeeze = self.avg_pool(x_rgb_trans).view(b, d)
-            x_e_squeeze = self.avg_pool(x_e_trans).view(b, d)
-            x_rgb_exitation = self.fc(x_rgb_squeeze).view(b, d, 1).permute(0, 2, 1).contiguous() # b, 1, d
-            x_e_exitation = self.fc(x_e_squeeze).view(b, d, 1).permute(0, 2, 1).contiguous() 
-            y_rgb = y_rgb * x_rgb_exitation.expand_as(y_rgb)
-            y_e = y_e * x_e_exitation.expand_as(y_e)
-            y = y_rgb + y_e # b, L, d
-            # to b, d, h, w
-            y = y.view(B, H, W, -1)
-            # if self.softmax_version:
-            #     y = y * x_rgb * x_e
-            # else:
-            #     y = y * F.silu(x_rgb) * F.silu(x_e)
-        # else:
-        #     x_rgb = F.silu(x_rgb)
-        #     x_e = F.silu(x_e)
-        #     x_rgb_trans = x_rgb.permute(0, 3, 1, 2).contiguous()
-        #     x_e_trans = x_e.permute(0, 3, 1, 2).contiguous()
-        #     y = self.forward_corev2_multimodal(x_rgb_trans, x_e_trans)
-        #     y = y * x_rgb * x_e
-        out = self.dropout(self.out_proj(y))
-        return out
-
-
+# =====================================================
 class CrossMambaFusion_SS2D_SSM(nn.Module):
     '''
     Cross Mamba Attention Fusion Selective Scan 2D Module with SSM
@@ -1779,24 +1635,11 @@ class CrossMambaFusion_SS2D_SSM(nn.Module):
             # to b, d, h, w
             y_rgb = y_rgb.view(B, H, W, -1)
             y_e = y_e.view(B, H, W, -1)
-            
-            # y_rgb = y_rgb * F.silu(x_rgb)
-            # y_e = y_e * F.silu(x_e)
-            
-            # if self.softmax_version:
-            #     y = y * x_rgb * x_e
-            # else:
-            #     y = y * F.silu(x_rgb) * F.silu(x_e)
-        # else:
-        #     x_rgb = F.silu(x_rgb)
-        #     x_e = F.silu(x_e)
-        #     x_rgb_trans = x_rgb.permute(0, 3, 1, 2).contiguous()
-        #     x_e_trans = x_e.permute(0, 3, 1, 2).contiguous()
-        #     y = self.forward_corev2_multimodal(x_rgb_trans, x_e_trans)
-        #     y = y * x_rgb * x_e
+
         out_rgb = self.dropout_rgb(self.out_proj_rgb(y_rgb))
         out_e = self.dropout_e(self.out_proj_e(y_e))
         return out_rgb, out_e
+
 
 class Permute(nn.Module):
     def __init__(self, *args):
@@ -1879,79 +1722,6 @@ class VSSBlock(nn.Module):
         else:
             return self._forward(input)
 
-# class ASPPConv(nn.Sequential):
-#     def __init__(self, in_channels, out_channels, dilation):
-#         modules = [
-#             nn.Conv2d(in_channels, out_channels, 3, padding=dilation, dilation=dilation, bias=False),
-#             nn.BatchNorm2d(out_channels),
-#             nn.ReLU()
-#         ]
-#         super(ASPPConv, self).__init__(*modules)
-        
-class DepthwiseSeparableConv(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, padding, dilation):
-        super(DepthwiseSeparableConv, self).__init__()
-        self.depthwise = nn.Conv2d(in_channels, in_channels, kernel_size=kernel_size, padding=padding, dilation=dilation, groups=in_channels, bias=False)
-        self.pointwise = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False)
-
-    def forward(self, x):
-        x = self.depthwise(x)
-        x = self.pointwise(x)
-        return x
-
-class ASPPConv(nn.Sequential):
-    def __init__(self, in_channels, out_channels, dilation):
-        modules = [
-            DepthwiseSeparableConv(in_channels, out_channels, 3, padding=dilation, dilation=dilation),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU()
-        ]
-        super(ASPPConv, self).__init__(*modules)
-
-class ASPPPooling(nn.Sequential):
-    def __init__(self, in_channels, out_channels):
-        super(ASPPPooling, self).__init__(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Conv2d(in_channels, out_channels, 1, bias=False),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU())
-
-    def forward(self, x):
-        size = x.shape[-2:]
-        for mod in self:
-            x = mod(x)
-        return F.interpolate(x, size=size, mode='bilinear', align_corners=False)
-
-class ASPP(nn.Module):
-    def __init__(self, in_channels, atrous_rates=[6], out_channels=256):
-        super(ASPP, self).__init__()
-        modules = []
-        modules.append(nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, 1, bias=False),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU()))
-
-        rates = tuple(atrous_rates)
-        for rate in rates:
-            modules.append(ASPPConv(in_channels, out_channels, rate))
-
-        modules.append(ASPPPooling(in_channels, out_channels))
-
-        self.convs = nn.ModuleList(modules)
-
-        self.project = nn.Sequential(
-            nn.Conv2d(len(self.convs) * out_channels, out_channels, 1, bias=False),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(),
-            nn.Dropout(0.5))
-
-    def forward(self, x):
-        res = []
-        for conv in self.convs:
-            res.append(conv(x))
-        res = torch.cat(res, dim=1)
-        return self.project(res)
-
 
 class ChannelAttention(nn.Module):
     def __init__(self, num_feat, squeeze_factor=16):
@@ -1988,7 +1758,10 @@ class ChannelAttentionBlock(nn.Module):
         return self.cab(x)
 
 
-class VSSDecoderBlock(nn.Module):
+class CVSSDecoderBlock(nn.Module):
+    '''
+    Channel-Aware VSS
+    '''
     def __init__(
         self,
         hidden_dim: int = 0,
@@ -2039,66 +1812,9 @@ class VSSDecoderBlock(nn.Module):
             return self._forward(input)
 
 
-class CAMFBlock(nn.Module):
-    '''
-    channel attention fusion block, with 1D SSM
-    '''
-    def __init__(
-        self,
-        hidden_dim: int = 0,
-        drop_path: float = 0,
-        norm_layer: Callable[..., torch.nn.Module] = partial(nn.LayerNorm, eps=1e-6),
-        attn_drop_rate: float = 0,
-        d_state: int = 16,
-        dt_rank: Any = "auto",
-        ssm_ratio=2.0,
-        shared_ssm=False,
-        softmax_version=False,
-        use_checkpoint: bool = False,
-        mlp_ratio=0.0,
-        act_layer=nn.GELU,
-        drop: float = 0.0,
-        **kwargs,
-    ):
-        super().__init__()
-        self.use_checkpoint = use_checkpoint
-        # self.norm = norm_layer(hidden_dim)
-        self.op = CAMF_SS2D_SSM(
-            d_model=hidden_dim, 
-            dropout=attn_drop_rate, 
-            d_state=d_state, 
-            ssm_ratio=ssm_ratio, 
-            dt_rank=dt_rank,
-            shared_ssm=shared_ssm,
-            softmax_version=softmax_version,
-            **kwargs
-        )
-        self.drop_path = DropPath(drop_path)
-        
-        self.mlp_branch = mlp_ratio > 0
-        if self.mlp_branch:
-            self.norm2 = norm_layer(hidden_dim)
-            mlp_hidden_dim = int(hidden_dim * mlp_ratio)
-            self.mlp = Mlp(in_features=hidden_dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop, channels_first=False)
-
-    def _forward(self, x_rgb: torch.Tensor, x_e: torch.Tensor):
-        x = x_rgb + x_e + self.drop_path(self.op(x_rgb, x_e))
-        if self.mlp_branch:
-            x = x + self.drop_path(self.mlp(self.norm2(x))) # FFN
-        return x
-
-    def forward(self, x_rgb: torch.Tensor, x_e: torch.Tensor):
-        '''
-        B C H W, B C H W -> B C H W
-        '''
-        if self.use_checkpoint:
-            return checkpoint.checkpoint(self._forward, x_rgb, x_e)
-        else:
-            return self._forward(x_rgb, x_e)
-
 class CrossMambaFusionBlock(nn.Module):
     '''
-    Cross Mamba Fusion
+    Cross Mamba Fusion (CroMB) fusion, with 2d SSM
     '''
     def __init__(
         self,
@@ -2155,9 +1871,9 @@ class CrossMambaFusionBlock(nn.Module):
             return self._forward(x_rgb, x_e)
 
 
-class ScaledMambaFusionBlock(nn.Module):
+class ConcatMambaFusionBlock(nn.Module):
     '''
-    scaled mamba fusion, with 2d SSM
+    Concat Mamba (ConMB) fusion, with 2d SSM
     '''
     def __init__(
         self,
@@ -2179,7 +1895,7 @@ class ScaledMambaFusionBlock(nn.Module):
         super().__init__()
         self.use_checkpoint = use_checkpoint
         # self.norm = norm_layer(hidden_dim)
-        self.op = MM_SS2D(
+        self.op = ConMB_SS2D(
             d_model=hidden_dim, 
             dropout=attn_drop_rate, 
             d_state=d_state, 
@@ -2211,6 +1927,7 @@ class ScaledMambaFusionBlock(nn.Module):
             return checkpoint.checkpoint(self._forward, x_rgb, x_e)
         else:
             return self._forward(x_rgb, x_e)
+
 
 class VSSM(nn.Module):
     def __init__(
@@ -2496,433 +2213,4 @@ class Backbone_VSSM(VSSM):
         return outs
 
 
-# ==================================================
-def check_vssm_equals_vmambadp():
-    try:
-        from _ignore.vmamba.vmamba_bak1 import VMamba2Dp
-        from _ignore.vmamba.vmamba_pub import VSSM
-    except:
-        print("original VSSM and VMamba2Dp not found.", flush=True)
-        return 
-
-    # test 1 True =================================
-    torch.manual_seed(time.time()); torch.cuda.manual_seed(time.time())
-    oldvss = VMamba2Dp(depths=[2,2,6,2]).half().cuda()
-    newvss = VSSM(depths=[2,2,6,2]).half().cuda()
-    newvss.load_state_dict(oldvss.state_dict())
-    input = torch.randn((12, 3, 224, 224)).half().cuda()
-    torch.cuda.manual_seed(0)
-    with torch.cuda.amp.autocast():
-        y1 = oldvss.forward_backbone(input)
-    torch.cuda.manual_seed(0)
-    with torch.cuda.amp.autocast():
-        y2 = newvss.forward_backbone(input)
-    print((y1 -y2).abs().sum()) # tensor(0., device='cuda:0', grad_fn=<SumBackward0>)
-    
-    torch.cuda.manual_seed(0)
-    with torch.cuda.amp.autocast():
-        y1 = oldvss.forward(input)
-    torch.cuda.manual_seed(0)
-    with torch.cuda.amp.autocast():
-        y2 = newvss.forward(input)
-    print((y1 -y2).abs().sum()) # tensor(0., device='cuda:0', grad_fn=<SumBackward0>)
-    
-    # test 2 True ==========================================
-    torch.manual_seed(0); torch.cuda.manual_seed(0)
-    oldvss = VMamba2Dp(depths=[2,2,6,2]).cuda()
-    torch.manual_seed(0); torch.cuda.manual_seed(0)
-    newvss = VSSM(depths=[2,2,6,2]).cuda()
-
-    miss_align = 0
-    for k, v in oldvss.state_dict().items(): 
-        same = (oldvss.state_dict()[k] == newvss.state_dict()[k]).all()
-        if not same:
-            print(k, same)
-            miss_align += 1
-    print("init miss align", miss_align) # init miss align 0
-
-
-def check_vssm1_equals_vssm(ss2dfwd=SS2D.forward_corev0):
-    try:
-        from _ignore.vmamba.vmamba_pub import VSSM as VSSM0
-    except:
-        print("original VSSM and VMamba2Dp not found.", flush=True)
-        return
-    orifwdcore = SS2D.forward_core
-    SS2D.forward_core = ss2dfwd
-
-    class VSSM_(VSSM):
-        def __init__(
-                self, 
-                patch_size=4, 
-                in_chans=3, 
-                num_classes=1000, 
-                depths=[2, 2, 9, 2], 
-                dims=[96, 192, 384, 768], 
-                # =========================
-                d_state=16, 
-                dt_rank="auto", 
-                ssm_ratio=2.0, 
-                attn_drop_rate=0., 
-                # =========================
-                drop_rate=0., 
-                drop_path_rate=0.1, 
-                mlp_ratio=4.0,
-                patch_norm=True, 
-                norm_layer=nn.LayerNorm,
-                downsample_version: str = "v2",
-                use_checkpoint=False,  
-                **kwargs,
-            ):
-            nn.Module.__init__(self)
-            self.num_classes = num_classes
-            self.num_layers = len(depths)
-            if isinstance(dims, int):
-                dims = [int(dims * 2 ** i_layer) for i_layer in range(self.num_layers)]
-            self.embed_dim = dims[0]
-            self.num_features = dims[-1]
-            self.dims = dims
-
-            self.patch_embed = nn.Sequential(
-                nn.Conv2d(in_chans, self.embed_dim, kernel_size=patch_size, stride=patch_size, bias=True),
-                Permute(0, 2, 3, 1),
-                (norm_layer(self.embed_dim) if patch_norm else nn.Identity()), 
-            )
-
-            dpr = [x.item() for x in torch.linspace(0, drop_path_rate, sum(depths))]  # stochastic depth decay rule
-
-            self.layers = nn.ModuleList()
-            for i_layer in range(self.num_layers):
-
-                # if downsample_version == "v2":
-                #     downsample = self._make_downsample(
-                #         self.dims[i_layer], 
-                #         self.dims[i_layer + 1], 
-                #         norm_layer=norm_layer,
-                #     ) if (i_layer < self.num_layers - 1) else nn.Identity()
-                # else:
-                #     downsample = PatchMerging2D(
-                #         self.dims[i_layer], 
-                #         self.dims[i_layer + 1], 
-                #         norm_layer=norm_layer,
-                #     ) if (i_layer < self.num_layers - 1) else nn.Identity()
-
-                self.layers.append(self._make_layer(
-                    dim = self.dims[i_layer],
-                    depth = depths[i_layer],
-                    drop_path = dpr[sum(depths[:i_layer]):sum(depths[:i_layer + 1])],
-                    use_checkpoint=use_checkpoint,
-                    norm_layer=norm_layer,
-                    downsample=(i_layer < self.num_layers - 1),
-                    d_state=d_state,
-                    dt_rank=dt_rank,
-                    ssm_ratio=ssm_ratio,
-                    attn_drop_rate=attn_drop_rate,
-                    mlp_ratio=mlp_ratio,
-                    drop_rate=drop_rate,
-                ))
-
-            self.classifier = nn.Sequential(OrderedDict(
-                norm=norm_layer(self.num_features), # B,H,W,C
-                permute=Permute(0, 3, 1, 2),
-                avgpool=nn.AdaptiveAvgPool2d(1),
-                flatten=nn.Flatten(1),
-                head=nn.Linear(self.num_features, num_classes),
-            ))
-            self.apply(self._init_weights)
-
-        def _make_layer(
-            self,
-            dim=96, 
-            depth=2,
-            drop_path=[0.1, 0.1], 
-            use_checkpoint=False, 
-            norm_layer=nn.LayerNorm,
-            downsample=nn.Identity(),
-            # ===========================
-            d_state=16,
-            dt_rank="auto",
-            ssm_ratio=2.0,
-            attn_drop_rate=0.0, 
-            # ===========================
-            mlp_ratio=4.0,
-            drop_rate=0.0,
-            **kwargs,
-        ):
-            assert depth == len(drop_path)
-            blocks = []
-            for d in range(depth):
-                blocks.append(VSSBlock(
-                    hidden_dim=dim, 
-                    drop_path=drop_path[d],
-                    norm_layer=norm_layer,
-                    attn_drop_rate=attn_drop_rate,
-                    d_state=d_state,
-                    dt_rank=dt_rank,
-                    ssm_ratio=ssm_ratio,
-                    use_checkpoint=use_checkpoint,
-                    mlp_ratio=mlp_ratio,
-                    act_layer=nn.GELU,
-                    drop=drop_rate,
-                    **kwargs,
-                ))
-                # blocks[d].op = SS2D0(blocks[d].op.d_model)
-            
-
-            if True: # is this really applied? Yes, but been overriden later in VSSM!
-                def _init_weights(module: nn.Module):
-                    for name, p in module.named_parameters():
-                        if name in ["out_proj.weight"]:
-                            p = p.clone().detach_() # fake init, just to keep the seed ....
-                            nn.init.kaiming_uniform_(p, a=math.sqrt(5))
-                layer = nn.Sequential(*copy.deepcopy(blocks))
-                layer.apply(_init_weights)
-
-            downsample = PatchMerging2D(dim, 2*dim, norm_layer=norm_layer) if downsample else nn.Identity()
-            
-            return nn.Sequential(OrderedDict(
-                blocks=nn.Sequential(*blocks,),
-                downsample=downsample,
-            ))
-
-        def forward_backbone(self, x):
-            x = self.patch_embed(x)
-            for l in self.layers:
-                x = l(x)
-            return x
-
-        def forward1(self, x: torch.Tensor):
-            x = self.patch_embed(x)
-            for layer in self.layers:
-                x = layer(x)
-            x = self.classifier.norm(x)
-            # here: whether has contiguous would differ
-            x = self.classifier.avgpool(x.permute(0, 3, 1, 2).contiguous()).flatten(1)
-            x = self.classifier.head(x)
-            return x
-
-    VSSM1 = partial(VSSM_, downsample_version="v1", mlp_ratio=0.0, ssm_ratio=2.0, dt_rank="auto", d_state=16)
-
-    # test 1 True =================================
-    torch.manual_seed(time.time()); torch.cuda.manual_seed(time.time())
-    oldvss = VSSM0(depths=[2,2,6,2]).half().cuda()
-    newvss = VSSM1(depths=[2,2,6,2]).half().cuda()
-    newvss.load_state_dict(oldvss.state_dict())
-    input = torch.randn((12, 3, 224, 224)).half().cuda()
-    torch.manual_seed(0); torch.cuda.manual_seed(0)
-    with torch.cuda.amp.autocast():
-        y1 = oldvss.forward_backbone(input)
-    torch.manual_seed(0); torch.cuda.manual_seed(0)
-    with torch.cuda.amp.autocast():
-        y2 = newvss.forward_backbone(input)
-    print((y1 -y2).abs().sum()) # tensor(0., device='cuda:0', grad_fn=<SumBackward0>)
-    
-    torch.manual_seed(0); torch.cuda.manual_seed(0)
-    with torch.cuda.amp.autocast():
-        y1 = oldvss.forward(input)
-    torch.manual_seed(0); torch.cuda.manual_seed(0)
-    with torch.cuda.amp.autocast():
-        y2 = newvss.forward1(input)
-    print((y1 -y2).abs().sum()) # tensor(0., device='cuda:0', grad_fn=<SumBackward0>)
-    torch.manual_seed(0); torch.cuda.manual_seed(0)
-    with torch.cuda.amp.autocast():
-        y3 = newvss.forward(input)
-    print((y1 -y3).abs().sum()) # tensor(0.0008, device='cuda:0', grad_fn=<SumBackward0>)
-    
-    # test 2 True ==========================================
-    torch.manual_seed(0); torch.cuda.manual_seed(0)
-    oldvss = VSSM0(depths=[2,2,6,2]).cuda()
-    torch.manual_seed(0); torch.cuda.manual_seed(0)
-    newvss = VSSM1(depths=[2,2,6,2]).cuda()
-
-    miss_align = 0
-    oldvss2new = copy.deepcopy(newvss)
-    oldvss2new.load_state_dict(oldvss.state_dict())
-    for k, v in oldvss2new.state_dict().items(): 
-        same = (oldvss2new.state_dict()[k] == newvss.state_dict()[k]).all()
-        if not same:
-            print(k, same)
-            miss_align += 1
-    print("init miss align", miss_align) # init miss align 0
-    SS2D.forward_core = orifwdcore
-
-
-def check_profile():
-    vss = VSSM(depths=[1], dims=1024).half().cuda()
-    input = torch.randn((128, 3, 56, 56)).half().cuda()
-    torch.cuda.manual_seed(0)
-
-    self = vss
-    blk = self.layers[0].blocks[0]
-    ln_1 = blk.ln_1
-    self_attention = blk.self_attention
-    selfa = self_attention
-    drop_path = blk.drop_path
-    input = self.patch_embed(input).detach()
-
-    def trace_handler(prof: torch.profiler.profile):
-        print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
-        # print(prof.export_chrome_trace("./tracev1.json"))
-
-    with torch.cuda.amp.autocast():
-        # with torch.autograd.profiler.profile(enabled=True, use_cuda=True, record_shapes=False, profile_memory=True, with_stack=True) as prof:
-        with torch.profiler.profile(
-            with_modules=True,
-            with_stack=True,
-            profile_memory=True,
-            activities=[
-                torch.profiler.ProfilerActivity.CPU,
-                torch.profiler.ProfilerActivity.CUDA,
-            ],
-
-            # In this example with wait=1, warmup=1, active=2, repeat=1,
-            # profiler will skip the first step/iteration,
-            # start warming up on the second, record
-            # the third and the forth iterations,
-            # after which the trace will become available
-            # and on_trace_ready (when set) is called;
-            # the cycle repeats starting with the next step
-
-            schedule=torch.profiler.schedule(
-                wait=1,
-                warmup=1,
-                active=2,
-                repeat=1),
-            on_trace_ready=trace_handler
-            # on_trace_ready=torch.profiler.tensorboard_trace_handler('./log')
-            # used when outputting for tensorboard
-            ) as prof:
-                for iter in range(1000):
-                    x = input
-                    # with torch.autograd.profiler.record_function("patch_embed"):
-                    #     x = self.patch_embed(x)
-                    
-                    B, H, W, C = x.shape
-                    ori = x
-
-                    with torch.autograd.profiler.record_function("VSSBlock.ln_1"):
-                        x = ln_1(x)
-
-                    with torch.autograd.profiler.record_function("SS2D.inproj"):
-                        xz = selfa.in_proj(x)
-                        x, z = xz.chunk(2, dim=-1) # (b, h, w, d)
-                        x = x.permute(0, 3, 1, 2).contiguous()
-
-                    with torch.autograd.profiler.record_function("SS2D.dwconv2d"):
-                        x = selfa.act(selfa.conv2d(x)) # (b, d, h, w)
-                        # x = self.act(x) # (b, d, h, w)
-                    
-                    with torch.autograd.profiler.record_function("SS2D.foreward_core"):
-                        # y = selfa.forward_corev2(x)
-                        # y = selfa.forward_corev3(x)
-                        y = selfa.forward_corev1(x)
-                        # y = selfa.forward_corev1(x)
-                    
-                    with torch.autograd.profiler.record_function("SS2D.transpose"):
-                        y = torch.transpose(y, dim0=1, dim1=2).contiguous().view(B, H, W, -1)
-                        y = selfa.out_norm(y)
-                        y = y * F.silu(z)
-                    
-                    with torch.autograd.profiler.record_function("SS2D.out_proj"):
-                        out = selfa.out_proj(y)
-                        if selfa.dropout is not None:
-                            out = selfa.dropout(out)
-
-                    with torch.autograd.profiler.record_function("SS2D.out"):
-                        x = ori + drop_path(out)
-
-                    with torch.autograd.profiler.record_function("backward"):
-                        x.sum().backward()
-
-                    prof.step()
-
-
-def load22kto1k():
-    if False:
-        # delete relative_position_index since we always re-init it
-        relative_position_index_keys = [k for k in state_dict.keys() if "relative_position_index" in k]
-        for k in relative_position_index_keys:
-            del state_dict[k]
-
-        # delete relative_coords_table since we always re-init it
-        relative_position_index_keys = [k for k in state_dict.keys() if "relative_coords_table" in k]
-        for k in relative_position_index_keys:
-            del state_dict[k]
-
-        # delete attn_mask since we always re-init it
-        attn_mask_keys = [k for k in state_dict.keys() if "attn_mask" in k]
-        for k in attn_mask_keys:
-            del state_dict[k]
-
-        # bicubic interpolate relative_position_bias_table if not match
-        relative_position_bias_table_keys = [k for k in state_dict.keys() if "relative_position_bias_table" in k]
-        for k in relative_position_bias_table_keys:
-            relative_position_bias_table_pretrained = state_dict[k]
-            relative_position_bias_table_current = model.state_dict()[k]
-            L1, nH1 = relative_position_bias_table_pretrained.size()
-            L2, nH2 = relative_position_bias_table_current.size()
-            if nH1 != nH2:
-                logger.warning(f"Error in loading {k}, passing......")
-            else:
-                if L1 != L2:
-                    # bicubic interpolate relative_position_bias_table if not match
-                    S1 = int(L1 ** 0.5)
-                    S2 = int(L2 ** 0.5)
-                    relative_position_bias_table_pretrained_resized = torch.nn.functional.interpolate(
-                        relative_position_bias_table_pretrained.permute(1, 0).view(1, nH1, S1, S1), size=(S2, S2),
-                        mode='bicubic')
-                    state_dict[k] = relative_position_bias_table_pretrained_resized.view(nH2, L2).permute(1, 0)
-
-        # bicubic interpolate absolute_pos_embed if not match
-        absolute_pos_embed_keys = [k for k in state_dict.keys() if "absolute_pos_embed" in k]
-        for k in absolute_pos_embed_keys:
-            # dpe
-            absolute_pos_embed_pretrained = state_dict[k]
-            absolute_pos_embed_current = model.state_dict()[k]
-            _, L1, C1 = absolute_pos_embed_pretrained.size()
-            _, L2, C2 = absolute_pos_embed_current.size()
-            if C1 != C1:
-                logger.warning(f"Error in loading {k}, passing......")
-            else:
-                if L1 != L2:
-                    S1 = int(L1 ** 0.5)
-                    S2 = int(L2 ** 0.5)
-                    absolute_pos_embed_pretrained = absolute_pos_embed_pretrained.reshape(-1, S1, S1, C1)
-                    absolute_pos_embed_pretrained = absolute_pos_embed_pretrained.permute(0, 3, 1, 2)
-                    absolute_pos_embed_pretrained_resized = torch.nn.functional.interpolate(
-                        absolute_pos_embed_pretrained, size=(S2, S2), mode='bicubic')
-                    absolute_pos_embed_pretrained_resized = absolute_pos_embed_pretrained_resized.permute(0, 2, 3, 1)
-                    absolute_pos_embed_pretrained_resized = absolute_pos_embed_pretrained_resized.flatten(1, 2)
-                    state_dict[k] = absolute_pos_embed_pretrained_resized
-
-        # check classifier, if not match, then re-init classifier to zero
-        head_bias_pretrained = state_dict['head.bias']
-        Nc1 = head_bias_pretrained.shape[0]
-        Nc2 = model.head.bias.shape[0]
-        if (Nc1 != Nc2):
-            if Nc1 == 21841 and Nc2 == 1000:
-                logger.info("loading ImageNet-22K weight to ImageNet-1K ......")
-                map22kto1k_path = f'data/map22kto1k.txt'
-                with open(map22kto1k_path) as f:
-                    map22kto1k = f.readlines()
-                map22kto1k = [int(id22k.strip()) for id22k in map22kto1k]
-                state_dict['head.weight'] = state_dict['head.weight'][map22kto1k, :]
-                state_dict['head.bias'] = state_dict['head.bias'][map22kto1k]
-            else:
-                torch.nn.init.constant_(model.head.bias, 0.)
-                torch.nn.init.constant_(model.head.weight, 0.)
-                del state_dict['head.weight']
-                del state_dict['head.bias']
-                logger.warning(f"Error in loading classifier head, re-init classifier head to 0")
-
-
-
-if __name__ == "__main__":
-    check_vssm_equals_vmambadp()
-    check_vssm1_equals_vssm(ss2dfwd=SS2D.forward_corev0)
-    check_vssm1_equals_vssm(ss2dfwd=SS2D.forward_corev0_seq)
-    check_vssm1_equals_vssm(ss2dfwd=SS2D.forward_core)
-    check_vssm1_equals_vssm(ss2dfwd=lambda *args, **kwargs: SS2D.forward_corev1(*args, **kwargs).float())
-
-    
 

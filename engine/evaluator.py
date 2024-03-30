@@ -17,7 +17,7 @@ logger = get_logger()
 
 class Evaluator(object):
     def __init__(self, dataset, class_num, norm_mean, norm_std, network, multi_scales, 
-                is_flip, devices, verbose=False, save_path=None, show_image=False):
+                is_flip, devices, verbose=False, save_path=None, show_image=False, config=None):
         self.eval_time = 0
         self.dataset = dataset
         self.ndata = self.dataset.get_length()
@@ -38,6 +38,7 @@ class Evaluator(object):
         if save_path is not None:
             ensure_dir(save_path)
         self.show_image = show_image
+        self.config = config
 
     def run(self, model_path, model_indice, log_file, log_file_link):
         """There are four evaluation modes:
@@ -231,7 +232,7 @@ class Evaluator(object):
         all_results = []
         for idx in tqdm(range(self.ndata)):
             dd = self.dataset[idx]
-            results_dict = self.func_per_iteration(dd,self.devices[0])
+            results_dict = self.func_per_iteration(dd,self.devices[0], self.config)
             all_results.append(results_dict)
         result_line, mean_IoU = self.compute_metric(all_results)
         logger.info(
@@ -285,10 +286,10 @@ class Evaluator(object):
 
         for idx in shred_list:
             dd = self.dataset[idx]
-            results_dict = self.func_per_iteration(dd, device)
+            results_dict = self.func_per_iteration(dd, device, self.config)
             self.results_queue.put(results_dict)
 
-    def func_per_iteration(self, data, device):
+    def func_per_iteration(self, data, device, config):
         raise NotImplementedError
 
     def compute_metric(self, results):
