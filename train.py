@@ -11,7 +11,6 @@ import torch.distributed as dist
 import torch.backends.cudnn as cudnn
 from torch.nn.parallel import DistributedDataParallel
 
-from config import config
 from dataloader.dataloader import get_train_loader
 from models.builder import EncoderDecoder as segmodel
 from dataloader.RGBXDataset import RGBXDataset
@@ -36,11 +35,24 @@ logger = get_logger()
 os.environ['MASTER_PORT'] = '16005'
 
 with Engine(custom_parser=parser) as engine:
+    args = parser.parse_args()
+    print(args)
+    
+    dataset_name = args.dataset_name
+    if dataset_name == 'mfnet':
+        from configs.config_MFNet import config
+    elif dataset_name == 'pst':
+        from configs.config_pst900 import config
+    elif dataset_name == 'nyu':
+        from configs.config_nyu import config
+    elif dataset_name == 'sun':
+        from configs.config_sunrgbd import config
+    else:
+        raise ValueError('Not a valid dataset name')
+
     print("=======================================")
     print(config.tb_dir)
     print("=======================================")
-    args = parser.parse_args()
-    print(args)
 
     cudnn.benchmark = True
     seed = config.seed
@@ -51,7 +63,7 @@ with Engine(custom_parser=parser) as engine:
         torch.cuda.manual_seed(seed)
 
     # data loader
-    train_loader, train_sampler = get_train_loader(engine, RGBXDataset)
+    train_loader, train_sampler = get_train_loader(engine, RGBXDataset, config)
 
     if (engine.distributed and (engine.local_rank == 0)) or (not engine.distributed):
         tb_dir = config.tb_dir + '/{}'.format(time.strftime("%b%d_%d-%H-%M", time.localtime()))

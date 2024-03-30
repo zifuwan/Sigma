@@ -3,7 +3,6 @@ import torch
 import numpy as np
 from torch.utils import data
 import random
-from config import config
 from utils.transforms import generate_random_crop_pos, random_crop_pad_to_shape, normalize
 
 def random_mirror(rgb, gt, modal_x):
@@ -25,19 +24,20 @@ def random_scale(rgb, gt, modal_x, scales):
     return rgb, gt, modal_x, scale
 
 class TrainPre(object):
-    def __init__(self, norm_mean, norm_std):
+    def __init__(self, norm_mean, norm_std, config):
         self.norm_mean = norm_mean
         self.norm_std = norm_std
+        self.config = config
 
     def __call__(self, rgb, gt, modal_x):
         rgb, gt, modal_x = random_mirror(rgb, gt, modal_x)
-        if config.train_scale_array is not None:
-            rgb, gt, modal_x, scale = random_scale(rgb, gt, modal_x, config.train_scale_array)
+        if self.config.train_scale_array is not None:
+            rgb, gt, modal_x, scale = random_scale(rgb, gt, modal_x, self.config.train_scale_array)
 
         rgb = normalize(rgb, self.norm_mean, self.norm_std)
         modal_x = normalize(modal_x, self.norm_mean, self.norm_std)
 
-        crop_size = (config.image_height, config.image_width)
+        crop_size = (self.config.image_height, self.config.image_width)
         crop_pos = generate_random_crop_pos(rgb.shape[:2], crop_size)
 
         p_rgb, _ = random_crop_pad_to_shape(rgb, crop_pos, crop_size, 0)
@@ -53,7 +53,7 @@ class ValPre(object):
     def __call__(self, rgb, gt, modal_x):
         return rgb, gt, modal_x
 
-def get_train_loader(engine, dataset):
+def get_train_loader(engine, dataset, config):
     data_setting = {'rgb_root': config.rgb_root_folder,
                     'rgb_format': config.rgb_format,
                     'gt_root': config.gt_root_folder,
@@ -66,7 +66,7 @@ def get_train_loader(engine, dataset):
                     'train_source': config.train_source,
                     'eval_source': config.eval_source,
                     'class_names': config.class_names}
-    train_preprocess = TrainPre(config.norm_mean, config.norm_std)
+    train_preprocess = TrainPre(config.norm_mean, config.norm_std, config)
 
     train_dataset = dataset(data_setting, "train", train_preprocess, config.batch_size * config.niters_per_epoch)
 

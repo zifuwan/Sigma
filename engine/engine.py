@@ -77,6 +77,7 @@ class Engine(object):
                        default='16005',
                        dest="port",
                        help='port for init_process_group')
+        p.add_argument('--dataset_name', '-n', default='mfnet', type=str)
 
     def register_state(self, **kwargs):
         self.state.register(**kwargs)

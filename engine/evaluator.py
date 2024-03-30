@@ -139,6 +139,9 @@ class Evaluator(object):
             else:
                 models = [None]
 
+        if not os.path.exists(log_file):
+            log_dir = os.path.dirname(log_file)
+            ensure_dir(log_dir)
         results = open(log_file, 'a')
         link_file(log_file, log_file_link)
 
