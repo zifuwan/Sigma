@@ -2,7 +2,7 @@
 <div align="center">
 <h1> Sigma: Siamese Mamba Network for Multi-Modal Semantic Segmentation </h1>
 
-[Zifu Wan]()<sup>1</sup>, [Yuhao Wang]()<sup>2</sup>, [Silong Yong]()<sup>1</sup>, [Pingping Zhang](https://github.com/yuhongtian17)<sup>2</sup>, [Simon Stepputtis]()<sup>1</sup>, [Katia Sycara]()<sup>1</sup>, [Yaqi Xie]()<sup>1</sup></sup>
+[Zifu Wan](https://zifuwan.github.io/)<sup>1</sup>, [Yuhao Wang](https://924973292.github.io//)<sup>2</sup>, [Silong Yong](https://silongyong.github.io/)<sup>1</sup>, [Pingping Zhang](https://scholar.google.com/citations?user=MfbIbuEAAAAJ&hl=zh-CN)<sup>2</sup>, [Simon Stepputtis](https://simonstepputtis.com/)<sup>1</sup>, [Katia Sycara](https://scholar.google.com/citations?user=VWv6a9kAAAAJ&hl=en)<sup>1</sup>, [Yaqi Xie](https://yaqi-xie.me/)<sup>1</sup></sup>
 
 <sup>1</sup>  Robotics Institute, Carnegie Mellon University, USA  
 <sup>2</sup>  School of Future Technology, Dalian University of Technology, China
@@ -161,8 +161,8 @@ We provide our trained weights on the four datasets:
 ### SUN RGB-D (37 categories)
 | Architecture | Backbone | mIOU | Weight |
 |:---:|:---:|:---:|:---:| 
-| Sigma | VMamba-T | 49.6% | [Sigma-T-SUN](https://drive.google.com/file/d/16mHj7AiEjkIWm77wBHO0dn7DQbGMljTM/view?usp=drive_link) |
-| Sigma | VMamba-S | 52.1% | [Sigma-S-SUN](https://drive.google.com/file/d/1PC8_Oj-m4yf-k6BQ4gBlGUdyOnG3xTsP/view?usp=drive_link) |
+| Sigma | VMamba-T | 50.0% | [Sigma-T-SUN](https://drive.google.com/file/d/16mHj7AiEjkIWm77wBHO0dn7DQbGMljTM/view?usp=drive_link) |
+| Sigma | VMamba-S | 52.4% | [Sigma-S-SUN](https://drive.google.com/file/d/1PC8_Oj-m4yf-k6BQ4gBlGUdyOnG3xTsP/view?usp=drive_link) |
 
 ## 🙏Acknowledgements
 
