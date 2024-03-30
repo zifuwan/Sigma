@@ -6,7 +6,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from config import config
 from utils.pyt_utils import ensure_dir, link_file, load_model, parse_devices
 from utils.visualize import print_iou, show_img
 from engine.evaluator import Evaluator
@@ -28,32 +27,6 @@ class SegEvaluator(Evaluator):
         pred = self.sliding_eval_rgbX(img, modal_x, config.eval_crop_size, config.eval_stride_rate, device)
         hist_tmp, labeled_tmp, correct_tmp = hist_info(config.num_classes, pred, label)
         results_dict = {'hist': hist_tmp, 'labeled': labeled_tmp, 'correct': correct_tmp}
-    
-    # # use this if you want to test with multi
-    # def func_per_iteration(self, batch_data, device):
-    #     batch_results = []
-
-    #     for data in batch_data:
-    #         img = data['data']
-    #         label = data['label']
-    #         modal_x = data['modal_x']
-    #         name = data['fn']
-
-    #         # Assuming sliding_eval_rgbX and hist_info can handle one instance at a time.
-    #         # You would need to adapt these functions as well if they should process batches.
-    #         pred = self.sliding_eval_rgbX(img, modal_x, config.eval_crop_size, config.eval_stride_rate, device)
-    #         hist_tmp, labeled_tmp, correct_tmp = hist_info(config.num_classes, pred, label)
-            
-    #         results_dict = {
-    #             'hist': hist_tmp, 
-    #             'labeled': labeled_tmp, 
-    #             'correct': correct_tmp,
-    #             'name': name  # Optional: Save name if needed for results aggregation or analysis
-    #         }
-
-    #         batch_results.append(results_dict)
-
-    #     return batch_results
 
         if self.save_path is not None:
             ensure_dir(self.save_path)
@@ -110,9 +83,22 @@ if __name__ == "__main__":
     parser.add_argument('--show_image', '-s', default=False,
                         action='store_true')
     parser.add_argument('--save_path', '-p', default=None)
+    parser.add_argument('--dataset_name', '-n', default='mfnet', type=str)
 
     args = parser.parse_args()
     all_dev = parse_devices(args.devices)
+    
+    dataset_name = args.dataset_name
+    if dataset_name == 'mfnet':
+        from configs.config_MFNet import config
+    elif dataset_name == 'pst':
+        from configs.config_pst900 import config
+    elif dataset_name == 'nyu':
+        from configs.config_nyu import config
+    elif dataset_name == 'sun':
+        from configs.config_sunrgbd import config
+    else:
+        raise ValueError('Not a valid dataset name')
 
     network = segmodel(cfg=config, criterion=None, norm_layer=nn.BatchNorm2d)
     data_setting = {'rgb_root': config.rgb_root_folder,
