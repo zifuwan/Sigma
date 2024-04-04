@@ -18,6 +18,10 @@ This repository contains the code for our paper `Sigma: Siamese Mamba Network fo
 
 ![](figs/sigma.png)
 
+`Sigma` stands as a lightweight and efficient method, striking a remarkable balance between accuracy and speed.
+
+![](figs/overall_flops.png)
+
 ## 💡Environment
 
 We test our codebase with `PyTorch 1.13.1 + CUDA 11.7` as well as `PyTorch 2.2.1 + CUDA 12.1`. Please install corresponding PyTorch and CUDA versions according to your computational resources. We showcase the environment creating process with PyTorch 1.13.1 as follows.
