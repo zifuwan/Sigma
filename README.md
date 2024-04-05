@@ -18,7 +18,7 @@ This repository contains the code for our paper `Sigma: Siamese Mamba Network fo
 
 ![](figs/sigma.png)
 
-`Sigma` stands as a lightweight and efficient method, striking a remarkable balance between accuracy and speed.
+`Sigma`, as a lightweight and efficient method, reaches a balance between accuracy and speed.
 
 ![](figs/overall_flops.png)
 
