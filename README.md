@@ -7,14 +7,14 @@
 <sup>1</sup>  Robotics Institute, Carnegie Mellon University, USA  
 <sup>2</sup>  School of Future Technology, Dalian University of Technology, China
 
-[![arXiv](https://img.shields.io/badge/arXiv-2403.12033-b31b1b.svg)](https://arxiv.org/abs/2403.12033) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![arXiv](https://img.shields.io/badge/arXiv-2403.12033-b31b1b.svg)](https://arxiv.org/abs/2404.04256) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 </div>
 
 
 ## 👀Introduction
 
-This repository contains the code for our paper `Sigma: Siamese Mamba Network for Multi-Modal Semantic Segmentation`. [[Paper](https://arxiv.org/abs/2403.12033)]
+This repository contains the code for our paper `Sigma: Siamese Mamba Network for Multi-Modal Semantic Segmentation`. [[Paper](https://arxiv.org/abs/2404.04256)]
 
 ![](figs/sigma.png)
 
@@ -185,11 +185,13 @@ If you have any questions, please  contact at [zifuw@andrew.cmu.edu](mailto:zifu
 If you find this code useful, please consider citing our work:
 
 ```bibtex
-@inproceedings{zhang2024hikersgg,
-  title={HiKER-SGG: Hierarchical Knowledge Enhanced Robust Scene Graph Generation},
-  author={Zhang, Ce and Stepputtis, Simon and Campbell, Joseph and Sycara, Katia and Xie, Yaqi},
-  booktitle={IEEE/CVF Conference on Computer Vision and Pattern Recognition},
-  year={2024}
+@misc{wan2024sigma,
+      title={Sigma: Siamese Mamba Network for Multi-Modal Semantic Segmentation}, 
+      author={Zifu Wan and Yuhao Wang and Silong Yong and Pingping Zhang and Simon Stepputtis and Katia Sycara and Yaqi Xie},
+      year={2024},
+      eprint={2404.04256},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
 ```
 
