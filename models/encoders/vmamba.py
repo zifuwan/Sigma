@@ -130,14 +130,13 @@ if True:
             xs_fuse[:, 0] = torch.concat([x_rgb.flatten(2, 3), x_e.flatten(2, 3)], dim=2)
             xs_fuse[:, 1] = torch.flip(xs_fuse[:, 0], dims=[-1])
             return xs_fuse
-        
+
         @staticmethod
         def backward(ctx, ys: torch.Tensor):
             # out: (b, 2, d, l)
             B, C, H, W = ctx.shape
             L = 2 * H * W
-            ys = ys[:, 0] + ys[:, 1].flip(dims=[-1]).view(B, 1, -1, L) # B, 1, d, 2 * H * W
-            ys = ys[:, 0] + ys[:, 1] # B, d, 2 * H * W
+            ys = ys[:, 0] + ys[:, 1].flip(dims=[-1]) # B, d, 2 * H * W
             # get B, d, H*W
             return ys[:, :, 0:H*W].view(B, -1, H, W), ys[:, :, H*W:2*H*W].view(B, -1, H, W) 
          
