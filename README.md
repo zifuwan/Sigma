@@ -185,13 +185,11 @@ If you have any questions, please  contact at [zifuw@andrew.cmu.edu](mailto:zifu
 If you find this code useful, please consider citing our work:
 
 ```bibtex
-@misc{wan2024sigma,
-      title={Sigma: Siamese Mamba Network for Multi-Modal Semantic Segmentation}, 
-      author={Zifu Wan and Yuhao Wang and Silong Yong and Pingping Zhang and Simon Stepputtis and Katia Sycara and Yaqi Xie},
-      year={2024},
-      eprint={2404.04256},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV}
+@article{wan2024sigma,
+  title={Sigma: Siamese Mamba Network for Multi-Modal Semantic Segmentation},
+  author={Wan, Zifu and Wang, Yuhao and Yong, Silong and Zhang, Pingping and Stepputtis, Simon and Sycara, Katia and Xie, Yaqi},
+  journal={arXiv preprint arXiv:2404.04256},
+  year={2024}
 }
 ```
 
