@@ -227,8 +227,11 @@ class MambaDecoder(nn.Module):
                     x = x.permute(0, 2, 3, 1).contiguous()  # B, 15, 20, 768
                     y = layer_up(x)  # B, 30, 40, 384
                 else:
+                    # interpolate y to input size (only pst900 dataset needs)
+                    B, C, H, W = inputs[3 - inx].shape
+                    y = F.interpolate(y.permute(0, 3, 1, 2).contiguous(), size=(H, W), mode='bilinear', align_corners=False).permute(0, 2, 3, 1).contiguous()
+                    
                     x = y + inputs[3 - inx].permute(0, 2, 3, 1).contiguous()
-
                     y = layer_up(x)
 
             x = self.norm_up(y)
