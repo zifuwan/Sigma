@@ -121,7 +121,7 @@ Install pytorch, cuda and cudnn, then install other dependencies via:
 4. You can also use single-GPU training:
 
     ```shell
-    CUDA_VISIBLE_DEVICES="1,2,3,4,5,6,7" torchrun -m --nproc_per_node=1 train.py -p 29501 -d 0 -n "dataset_name" 
+    CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7" torchrun -m --nproc_per_node=1 train.py -p 29501 -d 0 -n "dataset_name" 
     ```
 5. Results will be saved in `log_final` folder.
 
