@@ -223,7 +223,7 @@ with Engine(custom_parser=parser) as engine:
                                                 norm_mean=config.norm_mean, norm_std=config.norm_std,
                                                 network=model, multi_scales=config.eval_scale_array,
                                                 is_flip=config.eval_flip, devices=[model.device],
-                                                verbose=False,
+                                                verbose=False, config=config,
                                                 )
                         _, mean_IoU = segmentor.run(config.checkpoint_dir, str(epoch), config.val_log_file,
                                     config.link_val_log_file)
@@ -253,7 +253,7 @@ with Engine(custom_parser=parser) as engine:
                                             norm_mean=config.norm_mean, norm_std=config.norm_std,
                                             network=model, multi_scales=config.eval_scale_array,
                                             is_flip=config.eval_flip, devices=[1,2,3],
-                                            verbose=False,
+                                            verbose=False, config=config,
                                             )
                     _, mean_IoU = segmentor.run(config.checkpoint_dir, str(epoch), config.val_log_file,
                                 config.link_val_log_file)
