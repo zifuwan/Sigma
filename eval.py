@@ -59,7 +59,7 @@ class SegEvaluator(Evaluator):
 
         return results_dict
 
-    def compute_metric(self, results):
+    def compute_metric(self, results, config):
         hist = np.zeros((config.num_classes, config.num_classes))
         correct = 0
         labeled = 0

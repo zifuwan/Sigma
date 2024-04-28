@@ -234,7 +234,7 @@ class Evaluator(object):
             dd = self.dataset[idx]
             results_dict = self.func_per_iteration(dd,self.devices[0], self.config)
             all_results.append(results_dict)
-        result_line, mean_IoU = self.compute_metric(all_results)
+        result_line, mean_IoU = self.compute_metric(all_results, self.config)
         logger.info(
             'Evaluation Elapsed Time: %.2fs' % (
                     time.perf_counter() - start_eval_time))
@@ -268,12 +268,12 @@ class Evaluator(object):
             t = self.results_queue.get()
             all_results.append(t)
             if self.verbose:
-                self.compute_metric(all_results)
+                self.compute_metric(all_results, self.config)
 
         for p in procs:
             p.join()
 
-        result_line, mean_IoU = self.compute_metric(all_results)
+        result_line, mean_IoU = self.compute_metric(all_results, self.config)
         logger.info(
             'Evaluation Elapsed Time: %.2fs' % (
                     time.perf_counter() - start_eval_time))
@@ -292,7 +292,7 @@ class Evaluator(object):
     def func_per_iteration(self, data, device, config):
         raise NotImplementedError
 
-    def compute_metric(self, results):
+    def compute_metric(self, results, config):
         raise NotImplementedError
 
     # evaluate the whole image at once
