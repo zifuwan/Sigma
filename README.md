@@ -98,9 +98,9 @@ Install pytorch, cuda and cudnn, then install other dependencies via:
 ### Training
 1. Please download the pretrained [VMamba](https://github.com/MzeroMiko/VMamba) weights:
 
-    - [VMamba_Tiny](https://github.com/MzeroMiko/VMamba/releases/download/%2320240218/vssmtiny_dp01_ckpt_epoch_292.pth).
-    - [VMamba_Small](https://github.com/MzeroMiko/VMamba/releases/download/%2320240218/vssmsmall_dp03_ckpt_epoch_238.pth).
-    - [VMamba_Base](https://github.com/MzeroMiko/VMamba/releases/download/%2320240218/vssmbase_dp06_ckpt_epoch_241.pth).
+    - [VMamba_Tiny](https://github.com/zifuwan/Sigma/blob/main/pretrained/vmamba/vssmtiny_dp01_ckpt_epoch_292.pth).
+    - [VMamba_Small](https://github.com/zifuwan/Sigma/blob/main/pretrained/vmamba/vssmsmall_dp03_ckpt_epoch_238.pth).
+    - [VMamba_Base](https://github.com/zifuwan/Sigma/blob/main/pretrained/vmamba/vssmbase_dp06_ckpt_epoch_241.pth).
 
     <u> Please put them under `pretrained/vmamba/`. </u>
 

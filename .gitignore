@@ -5,7 +5,7 @@ datasets/
 log*/
 
 # Weights
-/pretrained
+
 /weights
 
 # Byte-compiled / optimized / DLL files
