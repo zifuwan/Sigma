@@ -2,10 +2,9 @@
 <div align="center">
 <h1> Sigma: Siamese Mamba Network for Multi-Modal Semantic Segmentation </h1>
 
-[Zifu Wan](https://zifuwan.github.io/)<sup>1</sup>, [Yuhao Wang](https://924973292.github.io//)<sup>2</sup>, [Silong Yong](https://silongyong.github.io/)<sup>1</sup>, [Pingping Zhang](https://scholar.google.com/citations?user=MfbIbuEAAAAJ&hl=zh-CN)<sup>2</sup>, [Simon Stepputtis](https://simonstepputtis.com/)<sup>1</sup>, [Katia Sycara](https://scholar.google.com/citations?user=VWv6a9kAAAAJ&hl=en)<sup>1</sup>, [Yaqi Xie](https://yaqi-xie.me/)<sup>1</sup></sup>
+[Zifu Wan](https://zifuwan.github.io/), [Yuhao Wang](https://924973292.github.io//), [Silong Yong](https://silongyong.github.io/), [Pingping Zhang](https://scholar.google.com/citations?user=MfbIbuEAAAAJ&hl=zh-CN), [Simon Stepputtis](https://simonstepputtis.com/), [Katia Sycara](https://scholar.google.com/citations?user=VWv6a9kAAAAJ&hl=en), [Yaqi Xie](https://yaqi-xie.me/)</sup>
 
-<sup>1</sup>  Robotics Institute, Carnegie Mellon University, USA  
-<sup>2</sup>  School of Future Technology, Dalian University of Technology, China
+Robotics Institute, Carnegie Mellon University
 
 [![arXiv](https://img.shields.io/badge/arXiv-2404.04256-b31b1b.svg)](https://arxiv.org/abs/2404.04256) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![X](https://img.shields.io/twitter/url/https/twitter.com/bukotsunikki.svg)](https://x.com/_akhaliq/status/1777272323504025769)
